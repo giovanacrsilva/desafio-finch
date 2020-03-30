@@ -13,6 +13,8 @@ public interface CardapioService {
 
     Optional<Cardapio> listarPorId(long id);
 
+    List<Optional<Cardapio>> listarPorLancheDescricao(String descricao);
+
     void salvar(Cardapio cardapio);
 
     void montar(Lanche lanche, Ingrediente... ingredientes);

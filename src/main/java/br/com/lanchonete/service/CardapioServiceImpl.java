@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +36,11 @@ public class CardapioServiceImpl implements CardapioService {
     }
 
     @Override
+    public List<Optional<Cardapio>> listarPorLancheDescricao(String descricao) {
+        return cardapioRepository.findByLancheDescricao(descricao);
+    }
+
+    @Override
     public void salvar(Cardapio cardapio) {
         cardapioRepository.save(cardapio);
     }
@@ -53,21 +59,29 @@ public class CardapioServiceImpl implements CardapioService {
     }
 
     private void aplicarPromocoes(Lanche lanche) {
+        List<Optional<Cardapio>> cardapios = listarPorLancheDescricao(lanche.getDescricao());
+
+		List<Ingrediente> ingredientes = new ArrayList<>();
+		for (Optional<Cardapio> optionalCardapio : cardapios) {
+			Cardapio cardapio = optionalCardapio.orElseThrow(() -> new RuntimeException("Não foi possível encontrar o Cardápio do Lanche: " + lanche.getDescricao()));
+			ingredientes.add(cardapio.getIngrediente());
+		}
+
         //light
-        if (lanche.getCardapios().stream().anyMatch(cardapio -> cardapio.getIngrediente().getDescricao().contains("alface"))
-                && lanche.getCardapios().stream().noneMatch(cardapio -> cardapio.getIngrediente().getDescricao().contains("bacon"))) {
+        if (ingredientes.stream().anyMatch(ingrediente -> ingrediente.getDescricao().equals("alface"))
+                && ingredientes.stream().noneMatch(ingrediente -> ingrediente.getDescricao().equals("bacon"))) {
             lanche.setPreco(lanche.getPreco().multiply(new BigDecimal("0.9")));
         }
 
         //muita carne
-        if (lanche.getCardapios().stream().filter(cardapio -> cardapio.getIngrediente().getDescricao().contains("hamburguer")).count() >= 3) {
-            long qtdeADescontar = lanche.getCardapios().stream().filter(cardapio -> cardapio.getIngrediente().getDescricao().contains("hamburguer")).count() / 3;
+        if (ingredientes.stream().filter(ingrediente -> ingrediente.getDescricao().equals("hamburguer")).count() >= 3) {
+            long qtdeADescontar = ingredientes.stream().filter(ingrediente -> ingrediente.getDescricao().equals("hamburguer")).count() / 3;
             lanche.setPreco(lanche.getPreco().subtract(ingredienteController.listarPorDescricao("hamburguer").getPreco().multiply(new BigDecimal(qtdeADescontar))));
         }
 
         //muito queijo
-        if (lanche.getCardapios().stream().filter(cardapio -> cardapio.getIngrediente().getDescricao().contains("queijo")).count() >= 3) {
-            long qtdeADescontar = lanche.getCardapios().stream().filter(cardapio -> cardapio.getIngrediente().getDescricao().contains("queijo")).count() / 3;
+        if (ingredientes.stream().filter(ingrediente -> ingrediente.getDescricao().equals("queijo")).count() >= 3) {
+            long qtdeADescontar = ingredientes.stream().filter(ingrediente -> ingrediente.getDescricao().equals("queijo")).count() / 3;
             lanche.setPreco(lanche.getPreco().subtract(ingredienteController.listarPorDescricao("queijo").getPreco().multiply(new BigDecimal(qtdeADescontar))));
         }
     }
